@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko" 
+	xmlns:th="http://www.thymeleaf.org"
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	layout:decorator="/layout/layout">
+
+<th:block layout:fragment="content">
+
+		<div class="dashboard">
+			<div class="row my-3 mr-1">
+				<div class="col-4">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">총 회원수</div>
+						<div class="dashboard-body" th:text="${members.get('content').size()}"></div>
+					</div>
+				</div>
+				<div class="col-4">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">금일 가입 회원수</div>
+						<div class="dashboard-body" th:text="${todayMember}"></div>
+					</div>
+				</div>
+				<div class="col-4">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">탈퇴 회원</div>
+						<div class="dashboard-body" th:text="${notMember}">
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row my-3 mr-1">
+				<div class="col-12">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">회원 가입 동향</div>
+						<div class="dashboard-body" id="chart1"></div>
+					</div>
+				</div>
+			</div>
+			<div class="row my-3 mr-1">
+				<div class="col-4">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">회원 연령대</div>
+						<div class="dashboard-body" id="chart3"></div>
+					</div>
+				</div>
+				<div class="col-4">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">c3 chart4</div>
+						<div class="dashboard-body" id="chart4"></div>
+					</div>
+				</div>
+				<div class="col-4">
+					<div class="dashboard-panel">
+						<div class="dashboard-head">남여 비율</div>
+						<div class="dashboard-body" id="chartPie"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+	<script src="http://d3js.org/d3.v5.js"></script>
+	<script th:src="@{/js/c3.js}"></script>
+
+<script type="text/javascript">
+	
+	$(function(){
+		pieDash();
+		replay();
+		ageDash();
+		connect();
+		dateMember();
+	});
+	
+	//남여 비율
+	function pieDash(){
+		$.ajax({
+			url : "/dashboard/pie",
+			type : "GET",
+			success : function(pie){
+				
+				var chartPie = c3.generate({
+					bindto : "#chartPie",
+					data : {
+						json : [pie],
+						keys : {
+							value: Object.keys(pie),
+						},
+						type : "donut",
+					},
+					donut : {
+						title : "남여 비율",
+					}
+					
+				});//end chart3
+				
+			}
+		});//end ajax
+	}
+	
+	//2초마다 type 변경
+	var chart4 = c3.generate({
+		bindto : "#chart4",
+		data : {
+			json : {
+				data1 : [200, 100, 130, 260, 280],
+				data2 : [10, 40, 20, 30, 80],
+				data3 : [100, 120, 160, 70, 180]
+			},
+			type : 'bar'
+		},
+		padding : {
+			top:0,right:40,bottom:0,left:40
+		}
+	});//end chart4
+	
+	function typeChange(){
+		return new Promise(function(resolve, reject){
+			setTimeout(function(){
+				chart4.transform('line');
+			}, 1000);
+			setTimeout(function(){
+				chart4.transform('area-spline');
+			}, 3000);
+			setTimeout(function(){
+				chart4.transform('scatter');
+			}, 5000);
+			setTimeout(function(){
+				chart4.transform('area');
+			}, 7000);
+			setTimeout(function(){
+				chart4.transform('bar');
+			}, 9000);
+			resolve();
+		});
+	}
+	
+	var replyId;
+	
+	async function replay(){
+		var result = await typeChange();
+		replyId = setInterval(typeChange, 10000);
+	}
+	
+	//연령대
+	function ageDash(){
+		$.ajax({
+			url : "/dashboard/age",
+			type : "GET",
+			success : function(age){
+				var chartAge = c3.generate({
+					bindto : "#chart3",
+					data : {
+						json : {
+							year : ["10대", "20대", "30대", "40대"],
+							'연령대' : [age.teenager, age.twenty, age.thirty, age.fourty],
+						},
+						x : "year",
+						type : 'bar',
+						colors : {
+							'연령대' : function(d){
+								if(d.index == 0){
+									return "#FA0081";
+								}else if(d.index == 1){
+									return "#FF4166";
+								}else if(d.index == 2){
+									return "#FF7E61";
+								}else if(d.index == 3){
+									return "#FFD36C";
+								}
+							}
+						},
+						onmouseover : function(d){
+							console.log(d);
+						},
+					},
+					axis : {
+						x : {
+							type : 'category',
+						},
+						rotated : true,
+					},
+					legend : {
+						show : false
+					},
+					grid : {
+						x : {
+							show : false
+						},
+						y : {
+							show : true
+						}
+					},
+					padding : {
+						top:0,right:40,bottom:0,left:40
+					}
+					
+				});//end chart3
+				
+			}//end success
+		});//end ajax
+	}
+	
+	//일주일간 가입 동향
+	function dateMember(){
+		$.ajax({
+			url : "/dashboard/date",
+			type : "GET",
+			success : function(data){
+				console.log(data);
+				//console.log(Object.values(data)[0]);
+				var keys = new Array();
+				var values = new Array();
+				var length = Object.keys(data).length;
+				for(var i = 0; i < length; i++){
+					keys[i] = Object.keys(data)[i];
+				}
+				
+				for(var i = 0; i < length; i++){
+					values[i] = Object.values(data)[i];
+				}
+				
+				//console.log(keys);
+				//console.log(values);
+				
+				var chart1 = c3.generate({
+					bindto : "#chart1",
+					data : {
+						json : {
+							date : keys,
+							'가입 회원수' : values,
+						},
+						x : 'date',
+						type : 'bar',
+						colors : {
+							'가입 회원수' : function(d){
+								if(d.index == 0){
+									return "#FA0081";
+								}else if(d.index == 1){
+									return "#FF4166";
+								}else if(d.index == 2){
+									return "#FF7E61";
+								}else if(d.index == 3){
+									return "#FFD36C";
+								}else if(d.index == 4){
+									return "#2987c6";
+								}else if(d.index == 5){
+									return "#7793d6";
+								}else if(d.index == 6){
+									return "#ffb600";
+								}
+							}
+						},
+					},
+					axis : {
+						x : {
+							type : 'category',
+						},
+					},
+					legend : {
+						show : false
+					},
+					grid : {
+						x : {
+							show : false
+						},
+						y : {
+							show : true
+						}
+					},
+					padding : {
+						top:0,right:40,bottom:0,left:40
+					}
+					
+				});//end chart1
+			}//end success
+		});//end ajax
+	}//end 일주일간 가입 동향
+	
+	
+	
+/* =====================websocket 정의 구간===================== */
+	var webSocket = "";
+	
+	//webSocket 연결 함수
+	function connect(){
+		var url = "ws://localhost:8082/websocket";
+		webSocket = new WebSocket(url);
+		init();
+	}
+	//webSocket 기본 함수 정의
+	function init(){
+		//websocket 서버와 접속
+		webSocket.onopen = function(e){
+			
+		};
+		
+		//websocket 서버와 접속이 끊기면 호출되는 함수
+		webSocket.onclose = function(message){
+			
+		};
+		
+		//websocket 서버와 통신 중 에러 발생시 호출되는 함수
+		webSocket.onerror = function(message){
+			
+		};
+		
+		//websocket 서버로부터 메시지가 오면 호출되는 함수
+		webSocket.onmessage = function(message){
+			location.reload();
+		};
+	}//end init()
+	
+	//websocket message send 함수
+	function sendMessage(message){
+		webSocket.send(message);
+	}
+	
+	//websocket 연결 해제 함수
+	function disconnect(){
+		webSocket.close();
+	}
+	
+/* =====================websocket 정의 구간===================== */
+	
+	
+</script>
+
+</th:block>
+
+</html>

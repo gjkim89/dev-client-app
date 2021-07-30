@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko" 
+	xmlns:th="http://www.thymeleaf.org"
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	layout:decorator="/layout/layout">
+
+<th:block layout:fragment="content">
+		
+	<div class="row my-3 mr-1">
+		<div class="col-6">
+			<div class="dashboard-panel">
+				<div class="dashboard-head">c3 chart1</div>
+				<div class="dashboard-body" id="chart1"></div>
+			</div>
+		</div>
+		<div class="col-6">
+			<div class="dashboard-panel">
+				<div class="dashboard-head">c3 chart2</div>
+				<div class="dashboard-body" id="chart2"></div>
+			</div>
+		</div>
+	</div>
+	<div class="row my-3 mr-1">
+		<div class="col-6">
+			<div class="dashboard-panel">
+				<div class="dashboard-head">c3 chart3</div>
+				<div class="dashboard-body" id="chart3"></div>
+			</div>
+		</div>
+		<div class="col-6">
+			<div class="dashboard-panel">
+				<div class="dashboard-head">c3 chart4</div>
+				<div class="dashboard-body" id="chart4"></div>
+			</div>
+		</div>
+	</div>
+		
+	<script src="http://d3js.org/d3.v5.js"></script>
+	<script th:src="@{/js/c3.js}"></script>
+
+<script type="text/javascript">
+	
+	$(function(){
+		replay();
+		connect();
+	});
+	
+	var chart1 = c3.generate({
+		bindto : '#chart1',
+		data : {
+			json : {
+				date : ['2021-01-01', '2021-01-02', '2021-01-03', '2021-01-04', '2021-01-05', '2021-01-06'],
+				data1 : [30, 200, 100, 400, 150, 250],
+				data2 : [50, 20, 10, 40, 15, 25],
+				data3 : [150, 120, 110, 140, 115, 125]
+			},
+			x : 'date',
+			type : 'line',
+			types : {
+				data3 : 'bar'
+			}
+		},
+		axis : {
+			x : {
+				type : 'timeseries',
+				tick : {
+					format : '%Y-%m-%d'
+					}
+			},
+			y : {
+				tick : {
+					format : d3.format("$,")
+				}
+			}
+		},
+		grid : {
+			x : {
+				show : false
+			},
+			y : {
+				show : true
+			}
+		},
+		padding : {
+			top:0,right:40,bottom:0,left:40
+		}
+	});//end chart
+
+	var chart2 = c3.generate({
+		bindto : "#chart2",
+		data : {
+			json : {
+				date : ['2021-01-01', '2021-01-02', '2021-01-03', '2021-01-04', '2021-01-05'],
+				upper : [200, 220, 240, 260, 280],
+				middle : [100, 120, 140, 160, 180],
+				bottom : [10, 20, 40, 60, 80]
+			},
+			x : "date",
+			types : {
+				upper : "scatter",
+				middle : "spline",
+				bottom : "area"
+			}
+		},
+		axis : {
+			x : {
+				type : 'timeseries',
+				tick : {
+					format : '%Y-%m-%d'
+					}
+			}
+		},
+		grid : {
+			x : {
+				show : false
+			},
+			y : {
+				show : true
+			}
+		},
+		tooltip : {
+			grouped :false
+		},
+		padding : {
+			top:0,right:40,bottom:0,left:40
+		}
+	});//end chart2
+	
+	var pie = {
+			사과 : 200,
+			호두 : 150,
+			블루베리 : 270,
+			딸기 : 120
+	};
+	
+	var chart3 = c3.generate({
+		bindto : "#chart3",
+		data : {
+			json : [pie],
+			keys : {
+				value: Object.keys(pie),
+			},
+			type : "donut",
+		},
+		donut : {
+			title : "파이 종류",
+		}
+		
+	});//end chart3
+	
+	var chart4 = c3.generate({
+		bindto : "#chart4",
+		data : {
+			json : {
+				data1 : [200, 100, 130, 260, 280],
+				data2 : [10, 40, 20, 30, 80],
+				data3 : [100, 120, 160, 70, 180]
+			},
+			type : 'bar'
+		},
+		padding : {
+			top:0,right:40,bottom:0,left:40
+		}
+	});//end chart4
+	
+	
+	
+	function typeChange(){
+		return new Promise(function(resolve, reject){
+			setTimeout(function(){
+				chart4.transform('line');
+			}, 1000);
+			setTimeout(function(){
+				chart4.transform('area-spline');
+			}, 3000);
+			setTimeout(function(){
+				chart4.transform('scatter');
+			}, 5000);
+			setTimeout(function(){
+				chart4.transform('area');
+			}, 7000);
+			setTimeout(function(){
+				chart4.transform('bar');
+			}, 9000);
+			resolve();
+		});
+	}
+	
+	var replyId;
+	
+	async function replay(){
+		var result = await typeChange();
+		replyId = setInterval(typeChange, 10000);
+	}
+	
+	
+	
+	
+	/* =====================websocket 정의 구간===================== */
+	var webSocket = "";
+	
+	//webSocket 연결 함수
+	function connect(){
+		var url = "ws://localhost:8082/dashsocket";
+		webSocket = new WebSocket(url);
+		init();
+	}
+	//webSocket 기본 함수 정의
+	function init(){
+		//websocket 서버와 접속
+		webSocket.onopen = function(e){
+			
+		};
+		
+		//websocket 서버와 접속이 끊기면 호출되는 함수
+		webSocket.onclose = function(message){
+			
+		};
+		
+		//websocket 서버와 통신 중 에러 발생시 호출되는 함수
+		webSocket.onerror = function(message){
+			
+		};
+		
+		//websocket 서버로부터 메시지가 오면 호출되는 함수
+		webSocket.onmessage = function(message){
+			location.reload();
+		};
+	}//end init()
+	
+	//websocket message send 함수
+	function sendMessage(message){
+		webSocket.send(message);
+	}
+	
+	//websocket 연결 해제 함수
+	function disconnect(){
+		webSocket.close();
+	}
+	
+/* =====================websocket 정의 구간===================== */
+	
+</script>
+
+</th:block>
+
+</html>

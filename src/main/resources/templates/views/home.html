@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ko" 
+	xmlns:th="http://www.thymeleaf.org"
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	layout:decorator="/layout/layout">
+	
+<th:block layout:fragment="content">
+	
+		<div class="row">
+			<div class="col-12">
+				<div class="table-responsive bg-white my-3 col-12">
+					<div class="table-head">
+						<div class="left">
+							<h1>Members</h1>
+						</div>
+						<div class="right">
+							<button type="button" id="regBtn" data-toggle="tooltip" title="등록창 오픈">사용자 등록</button>
+						</div>
+					</div>
+					<div class="table-body">
+						<table class="table table-bordered">
+							<thead>
+								<tr>
+									<th>번호</th>
+									<th>아이디</th>
+									<th>이름</th>
+									<th>나이</th>
+									<th>성별</th>
+									<th>가입일</th>
+									<th>회원여부</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody th:if="${members.get('content').size() > 0}">
+								<tr th:each="member:${members.get('content')}">
+									<td th:text="${member.get('rowNumber').longValue()}"></td>
+									<td th:text="${member.get('id').textValue()}"></td>
+									<td th:text="${member.get('name').textValue()}"></td>
+									<td th:text="${member.get('age').intValue()}"></td>
+									<td th:text="${member.get('sex').textValue()}"></td>
+									<td th:with="sdf = ${new java.text.SimpleDateFormat('yyyy-MM-dd''T''HH:mm:ss')}"
+										th:text="${#dates.format(sdf.parse(member.get('createdTimeAt').textValue()), 'yyyy-MM-dd HH:mm')}"></td>
+									<td th:text="${member.get('isMember').booleanValue()}"></td>
+									<td>
+										<button th:if="${member.get('isMember').booleanValue() == true}" class="modifyBtn" th:data-rowNumber="${member.get('rowNumber').longValue()}">수정</button>
+										<button th:if="${member.get('isMember').booleanValue() == true}" class="removeBtn" th:data-rowNumber="${member.get('rowNumber').longValue()}">탈퇴</button>
+									</td>
+								</tr>
+							</tbody>
+							<tbody th:unless="${members.get('content').size() > 0}">
+								<tr>
+									<td colspan="8">저장된 글이 없습니다.</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					<div class="table-footer">
+						<div th:if="${members.get('content').size() > 0}" th:with="start=${members.get('pageable').get('pageNumber').longValue()} / 10 + 1, 
+ 							end=(${start + 9 < members.get('totalPages').longValue() ? start + 9 : members.get('totalPages').longValue()}),
+ 							now=${members.get('pageable').get('pageNumber').longValue()}">
+							<ul class="pagination justify-content-center">
+								<li class="page-item" th:if="${start > 10}">
+									<a th:href="@{/client/members?(page=${start - 10})}" class="page-link">&laquo;</a>
+								</li>
+								<li class="page-item" th:if="${start > 1}">
+									<a th:href="@{/client/members?(page=${now - 1})}" class="page-link">&lsaquo;</a>
+								</li>
+								<li class="page-item" th:each="page: ${#numbers.sequence(start, end)}">
+									<a th:href="@{/client/members?(page=${page-1})}" th:text="${page}" class="page-link"
+		                               	th:classappend="${page == now+1} ? active"></a>
+								</li>
+		                   		<li class="page-item" th:if="${now+1 < end}">
+		                   			<a th:href="@{/client/members?(page=${now + 1})}" class="page-link">&rsaquo;</a>
+		                   		</li>
+		                   		<li class="page-item" th:if="${end < members.get('totalPages').longValue()}">
+		                   			<a th:href="@{/client/members?(page=${start + 10})}" class="page-link">&raquo;</a>
+		                   		</li>
+		                   	</ul>
+		                </div>
+	        		</div>
+				</div>
+			</div>
+		</div>
+	
+	<div class="modal fade" id="memberModal" tabindex="-1"
+		role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h4 class="modal-title" id="myModalLabel"></h4>
+				</div>
+					<div class="modal-body" id="modalBody">
+						<div class="form-group">
+							<label>아이디</label>
+							<input class="form-control" id="id" name='id'>
+						</div>
+						<div class="form-group">
+							<label>이름</label>
+							<input class="form-control" id="name" name='name'>
+						</div>
+						<div class="form-group">
+							<label>나이</label>
+							<input class="form-control" id="age" name='age'>
+						</div>
+						<div class="form-group">
+							<label>성별</label>
+							<input class="form-control" id="sex" name='sex'>
+						</div>
+						<div class="modal-footer">
+							<button type="button" id="addBtn" class="btn-sm">등록</button>
+							<button type="button" id="modBtn" class="btn-sm">수정</button>
+							<button type="button" class="btn-sm" data-dismiss="modal">Close</button>
+						</div>
+					</div>
+					<!-- /.modal-content -->
+				<!--  /.form -->
+			</div>
+			<!-- /.modal-dialog -->
+		</div>
+		<!-- /.modal -->
+	</div>
+	
+
+<script type="text/javascript">
+	
+	let oldData = new Object();
+	
+	$(function(){
+		
+		//member 등록 모달 show, 마우스로 이동
+		$("#regBtn").on("click", function(){
+			
+			$("#memberModal").find(".form-control").val("");
+			
+			$("#memberModal").modal({
+				//backdrop 옵션
+				//true: 배경불투명, 배경클릭시 닫힘, false: 불투명 없어짐, 배경클릭시 안닫힘, "static": 배경클릭시 안닫힘
+				backdrop: "static",
+				show: true
+			});
+			
+			//draggable 옵션 사용 : 마우스로 이동 가능
+			$("#memberModal").draggable({
+				handle: ".modal-header"
+			});
+			
+			$("#myModalLabel").text("사용자 등록");
+			$("#modBtn").hide();
+			
+		});//end #regBtn
+		
+		//사용자 등록
+		$("#addBtn").on("click", function(){
+			
+			if($.trim($("#id").val()) == ""){
+				alert("아이디를 입력해 주세요");
+				$("#id").val("");
+				$("#id").focus();
+			}else if($.trim($("#name").val()) == ""){
+				alert("이름을 입력해 주세요.");
+				$("#name").val("");
+				$("#name").focus();
+			}else if($.trim($("#age").val()) == ""){
+				alert("나이를 입력해 주세요.");
+				$("#age").val("");
+				$("#age").focus();
+			}else if($.trim($("#sex").val()) == ""){
+				alert("성별을 입력해 주세요.");
+				$("#sex").val("");
+				$("#sex").focus();
+			}else{
+				var id = $("#modalBody").find("input[name='id']").val();
+				var name = $("#modalBody").find("input[name='name']").val();
+				var age = $("#modalBody").find("input[name='age']").val();
+				var sex = $("#modalBody").find("input[name='sex']").val();
+				
+				var memberDto = {
+						id : id,
+						name : name,
+						age : age,
+						sex : sex
+				};
+				
+				$.ajax({
+					url : "/client/members",
+					data : JSON.stringify(memberDto),
+					contentType : "application/json; charset=utf-8",
+					type : "POST",
+					success : function(data){
+						sendMessage("사용자 등록");
+						alert("사용자가 등록되었습니다.");
+						$("#memberModal").modal("hide");
+						location.reload();
+					},
+					error : function(e){
+						alert("이미 가입된 사용자 입니다.");
+						$("#id").focus();
+						$("#id").select();
+					}
+				});//end ajax
+				
+			}//end esle
+			
+		});//end 사용자 등록
+		
+		
+		//수정 modal show(상세 조회)
+		$(".modifyBtn").on("click", function(){
+			var rowNumber = $(this).attr('data-rowNumber');
+			
+			$.ajax({
+				url : "/client/members/"+rowNumber,
+				type : "GET",
+				success : function(member){
+					$("#memberModal").modal({
+						backdrop: "static",
+						show: true
+					});
+					
+					$("#memberModal").draggable({
+						handle: ".modal-header"
+					});
+					$("#addBtn").hide();
+					$("#modBtn").show();
+					$("#myModalLabel").text("사용자 수정");
+					
+					$("#modalBody").find("input[name='id']").val(member.id);
+					$("#modalBody").find("input[name='name']").val(member.name);
+					$("#modalBody").find("input[name='age']").val(member.age);
+					$("#modalBody").find("input[name='sex']").val(member.sex);
+					$("#modBtn").attr('data-rowNumber', rowNumber);
+					
+					oldData.id = member.id;
+					oldData.name = member.name;
+					oldData.age = member.age;
+					oldData.sex = member.sex;
+				},
+				error : function(e){
+					alert("오류가 발생하였습니다\n" + e.responseJSON.status + "\n" + e.responseJSON.error);
+				}
+			});//end ajax
+		});//end 수정 modal show
+		
+		//member 수정
+		$("#modBtn").on("click", function(){
+			
+			var rowNumber = $(this).attr('data-rowNumber');
+			
+			if($("#id").val() == oldData.id && $("#name").val() == oldData.name
+					&& $("#age").val() == oldData.age && $("#sex").val() == oldData.sex){
+				alert("변경된 값이 없습니다");
+				$("#memberModal").modal("hide");
+			}else if($.trim($("#id").val()) == ""){
+				alert("아이디를 입력해 주세요");
+				$("#id").val("");
+				$("#id").focus();
+			}else if($.trim($("#name").val()) == ""){
+				alert("이름을 입력해 주세요");
+				$("#name").val("");
+				$("#name").focus();
+			}else if($.trim($("#age").val()) == ""){
+				alert("나이를 입력해 주세요");
+				$("#age").val("");
+				$("#age").focus();
+			}else if($.trim($("#sex").val()) == ""){
+				alert("성별을 입력해 주세요");
+				$("#sex").val("");
+				$("#sex").focus();
+			}else{
+				var id = $("#modalBody").find("input[name='id']").val();
+				var name = $("#modalBody").find("input[name='name']").val();
+				var age = $("#modalBody").find("input[name='age']").val();
+				var sex = $("#modalBody").find("input[name='sex']").val();
+				
+				var memberDto = {
+						id : id,
+						name : name,
+						age : age,
+						sex : sex
+				};
+				
+				$.ajax({
+					url : "/client/members/"+rowNumber,
+					data : JSON.stringify(memberDto),
+					contentType : "application/json; charset=utf-8",
+					type : "PUT",
+					success : function(){
+						alert("변경되었습니다");
+						if(oldData.age != memberDto.age){
+							sendMessage("연령 변경");
+						}else if(oldData.sex != memberDto.sex){
+							sendMessage("성별 변경");
+						}
+						
+						$("#memberModal").modal("hide");
+						location.reload();
+					},
+					error : function(e){
+						alert("이미 가입된 사용자 입니다.");
+						$("#id").focus();
+						$("#id").select();
+					}
+				});//end ajax
+			}//end else
+			
+		});//end member 수정
+		
+		//member 탈퇴
+		$(".removeBtn").on("click", function(){
+			
+			var rowNumber = $(this).attr('data-rowNumber');
+			
+			$.ajax({
+				url : "/client/members/"+rowNumber,
+				type : "DELETE",
+				success : function(){
+					alert(rowNumber + "번 회원이 탈퇴처리되었습니다.");
+					sendMessage("회원 탈퇴");
+					location.reload();
+				}
+			});//end ajax
+			
+		});
+		
+		//웹소켓 연결
+		connect();
+		
+	});//end $(function())
+	
+/* =====================websocket 정의 구간===================== */
+	var webSocket = "";
+	
+	//webSocket 연결 함수
+	function connect(){
+		var url = "ws://localhost:8082/websocket";
+		webSocket = new WebSocket(url);
+		init();
+	}
+	//webSocket 기본 함수 정의
+	function init(){
+		//websocket 서버와 접속 되면 호출되는 함수
+		webSocket.onopen = function(e){
+			
+		};
+		
+		//websocket 서버와 접속이 끊기면 호출되는 함수
+		webSocket.onclose = function(message){
+			
+		};
+		
+		//websocket 서버와 통신 중 에러 발생시 호출되는 함수
+		webSocket.onerror = function(message){
+			
+		};
+		
+		//websocket 서버로부터 메시지가 오면 호출되는 함수
+		webSocket.onmessage = function(message){
+			
+		};
+	}//end init()
+	
+	//websocket message send 함수
+	function sendMessage(message){
+		webSocket.send(message);
+	}
+	
+	//websocket 연결 해제 함수
+	function disconnect(){
+		webSocket.close();
+	}
+	
+/* =====================websocket 정의 구간===================== */
+	
+</script>
+
+</th:block>
+</html>
