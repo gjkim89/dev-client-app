@@ -14,7 +14,8 @@
 							<h1>Members</h1>
 						</div>
 						<div class="right">
-							<button type="button" id="regBtn" data-toggle="tooltip" title="등록창 오픈">사용자 등록</button>
+							<button type="button" id="regBtn">사용자 등록</button>
+							<button type="button" id="excelBtn">엑셀 다운로드</button>
 						</div>
 					</div>
 					<div class="table-body">
@@ -124,6 +125,13 @@
 <script type="text/javascript">
 	
 	let oldData = new Object();
+	
+	//excel download
+	$("#excelBtn").on("click", function(){
+		
+		location.href = "/client/excel";
+		
+	});//end excel download
 	
 	$(function(){
 		

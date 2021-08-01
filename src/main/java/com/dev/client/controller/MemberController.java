@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -23,9 +24,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 
 import com.dev.client.dto.MemberDto;
+import com.dev.client.excel.ExcelFile;
+import com.dev.client.model.Pie;
 import com.dev.client.util.ConvertUriUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -166,6 +172,36 @@ public class MemberController {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+	}
+	
+	@GetMapping(value = "excel")
+	public String cexcelDownload(HttpServletResponse response) throws URISyntaxException {
+		
+		HttpHeaders headers = new HttpHeaders();
+		
+		HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+		String path = "http://localhost:8081/server/members";
+		URI uri = new URI(path);
+		
+		try {
+			
+			ResponseEntity<String> result = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
+			JsonNode node = mapper.readTree(result.getBody()).findPath("content");
+			
+			String json = mapper.writeValueAsString(node);
+			
+			String paths = "C:\\dev\\";
+			String name = "excel_ex";
+			
+			ExcelFile excelFile = new ExcelFile(json, paths, name);
+			excelFile.write();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return "redirect:/client/members";
 		
 	}
 	
